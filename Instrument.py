@@ -34,7 +34,7 @@ class SCPIProperty:
     Attributes:
         get_cmd (str): Command to get the property value.
         set_cmd (str | None): Command to set the property value. Set to
-            None for read-only properties. 
+            `None` for read-only properties. 
     """
     def __init__(self, get_cmd: str, set_cmd: str | None = None):
         """Initialize the SCPI property descriptor.
@@ -73,37 +73,46 @@ class SCPIProperty:
 
 class Instrument:
     """Base class for instruments using the VISA interface."""
-    def __init__(self, resource_name: str, **kwargs) -> None:
+    def __init__(
+            self,
+            resource_name: str,
+            label: str | None = None,
+            **kwargs
+        ) -> None:
         """Initialize the instrument interface.
 
         Args:
-            resource_name (str): Resource name of the instrument. This is
-                the name used by :class:`pyvisa.ResourceManager` to identify
-                the instrument.
+            resource_name (str): Resource name of the instrument. This
+                is the name used by :class:`pyvisa.ResourceManager` to
+                identify the instrument.
+            label (str | None): Optional label for the instrument.
             kwargs (dict): Additional keyword arguments to forward to 
                 :class:`pyvisa.ResourceManager.open_resource()`.
 
         See also:
-            :class:`pyvisa.ResourceManager`: For managing VISA resources.
-            :class:`pyvisa.Resource`: For interacting with the instrument.
+            :class:`pyvisa.ResourceManager`: For managing VISA
+                resources.
+            :class:`pyvisa.Resource`: For interacting with the
+                instrument.
         """
         self._rm = pyvisa.ResourceManager()
         self._resource = self._rm.open_resource(resource_name, **kwargs)
+        self.label = label or self.__class__.__name__
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the underlying resource.
 
-        This method allows dynamic access to attributes and methods of the
-        underlying VISA resource while logging the calls. If the attribute
-        is a method, it returns a wrapper that logs the call and its
-        arguments. Set logging level to DEBUG to see the logs.
+        This method allows dynamic access to attributes and methods of
+        the underlying VISA resource while logging the calls. If the
+        attribute is a method, it returns a wrapper that logs the call
+        and its arguments. Set logging level to DEBUG to see the logs.
 
         Args:
             name (str): Name of the attribute to access.
         
         Returns:
-            Any: The attribute value or a callable wrapper if the attribute
-                is a method.
+            Any: The attribute value or a callable wrapper if the
+                attribute is a method.
         """
         attr = getattr(self._resource, name)
 
@@ -114,12 +123,15 @@ class Instrument:
             """Wrapper to log method calls and their arguments."""
             args_str = " ".join(map(str, args))
             kwargs_str = " ".join(f"{k}={repr(v)}" for k, v in kwargs.items())
-            logger.debug(f"{name} {args_str} {kwargs_str}".strip())
+
+            logger.debug(f"[{self.label}] Command: {name} | "
+                         f"Input: {args_str} {kwargs_str}".strip())
 
             result = attr(*args, **kwargs)
 
             if result is not None:
-                logger.debug(f"{name} {result}")
+                logger.debug(f"[{self.label}] Command: {name} | "
+                             f"Output: {result}")
 
             return result
         return wrapper
@@ -156,24 +168,24 @@ class Instrument:
             logger.error(f"Error closing resource manager: {e}")
 
 
-class Channel:
-    """Represents a channel of an instrument.
-    
+class SubSystem:
+    """Represents a SCPI subsystem for an instrument.
+
     Attributes:
         instrument (Instrument): The instrument instance to which the
-            channel belongs.
-        index (int): Channel number.
+            subsystem belongs.
+        suffix (int): Subsystem suffix.
     """
-    def __init__(self, instrument: Instrument, index: int) -> None:
+    def __init__(self, instrument: Instrument, suffix: int) -> None:
         """Initialize the channel.
         
         Args:
             instrument (Instrument): The instrument instance to which
-                the channel belongs.
-            index (int): Channel number.
+                the subsystem belongs.
+            suffix (int): Subsystem suffix.
         """
         self.instrument = instrument
-        self.index = index
+        self.suffix = suffix
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the instrument instance.
