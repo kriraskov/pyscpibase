@@ -124,14 +124,17 @@ class Instrument:
             args_str = " ".join(map(str, args))
             kwargs_str = " ".join(f"{k}={repr(v)}" for k, v in kwargs.items())
 
-            logger.debug(f"[{self.label}] Command: {name} | "
-                         f"Input: {args_str} {kwargs_str}".strip())
+            logger.debug(
+                f"[{self.label}] Command: {name} | "
+                f"Input: {args_str} {kwargs_str}".strip()
+            )
 
             result = attr(*args, **kwargs)
 
             if result is not None:
-                logger.debug(f"[{self.label}] Command: {name} | "
-                             f"Output: {result}")
+                logger.debug(
+                    f"[{self.label}] Command: {name} | Output: {result}"
+                )
 
             return result
         return wrapper
@@ -157,15 +160,23 @@ class Instrument:
                 resource manager.
         """
         try:
-            logger.debug("Closing resource")
+            logger.debug(
+                f"[{self.label}] Closing resource: {self._resource}"
+            )
             self._resource.close()
         except Exception as e:
-            logger.error(f"Error closing resource: {e}")
+            logger.error(
+                f"[{self.label}] Error closing resource: {e}"
+            )
         try:
-            logger.debug("Closing resource manager")
+            logger.debug(
+                f"[{self.label}] Closing resource manager: {self._rm}"
+            )
             self._rm.close()
         except Exception as e:
-            logger.error(f"Error closing resource manager: {e}")
+            logger.error(
+                f"[{self.label}] Error closing resource manager: {e}"
+            )
 
 
 class SubSystem:
