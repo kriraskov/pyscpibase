@@ -103,7 +103,7 @@ class Instrument:
             logger.error(f"[{self.label}] Failed to open resource manager: {e}")
         try:
             self._resource = self._rm.open_resource(resource_name, **kwargs)
-            logger.debug(f"[{self.label}] Opened resource: {self_resource}")
+            logger.debug(f"[{self.label}] Opened resource: {self._resource}")
         except Exception as e:
             logger.error(f"[{self.label}] Failed to open resource: {e}")
 
