@@ -95,9 +95,17 @@ class Instrument:
             :class:`pyvisa.Resource`: For interacting with the
                 instrument.
         """
-        self._rm = pyvisa.ResourceManager()
-        self._resource = self._rm.open_resource(resource_name, **kwargs)
         self.label = label or self.__class__.__name__
+        try:
+            self._rm = pyvisa.ResourceManager()
+            logger.debug(f"[{self.label}] Opened resource manager: {self._rm}")
+        except Exception as e:
+            logger.error(f"[{self.label}] Failed to open resource manager: {e}")
+        try:
+            self._resource = self._rm.open_resource(resource_name, **kwargs)
+            logger.debug(f"[{self.label}] Opened resource: {self_resource}")
+        except Exception as e:
+            logger.error(f"[{self.label}] Failed to open resource: {e}")
 
     def __getattr__(self, name: str) -> Any:
         """Delegate attribute access to the underlying resource.
