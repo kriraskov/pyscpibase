@@ -36,7 +36,8 @@ class SCPIProperty:
         set_cmd (str | None): Command to set the property value. Set to
             `None` for read-only properties. 
     """
-    def __init__(self, get_cmd: str, set_cmd: str | None = None):
+    def __init__(self, get_cmd: str, set_cmd: str | None = None,
+                 typecast: type = str):
         """Initialize the SCPI property descriptor.
         
         Args:
@@ -45,7 +46,8 @@ class SCPIProperty:
                 Set to None for read-only properties.
         """
         self.get_cmd = get_cmd
-        self.set_cmd = set_cmd
+        self.set_cmd = set_cmd or get_cmd.replace("?", "")
+        self.typecast = typecast
 
     def __get__(self, instance: VISAInterface, owner: type):
         """Get a property value from the instrument.
@@ -59,7 +61,8 @@ class SCPIProperty:
         """
         if instance is None:
             return self
-        return str(instance.query(self.get_cmd))
+        get_cmd = self.get_cmd.format(**vars(instance))
+        return self.typecast(instance.query(get_cmd))
     
     def __set__(self, instance: VISAInterface, value: Any) -> None:
         """Set a property value on the instrument.
@@ -68,11 +71,15 @@ class SCPIProperty:
             instance (VISAInterface): Instance of the instrument.
             value (Any): Value to set for the property.
         """
-        instance.write(f"{self.set_cmd} {value}")
+        set_cmd = self.set_cmd.format(**vars(instance))
+        instance.write(f"{set_cmd} {value}")
 
 
 class Instrument:
     """Base class for instruments using the VISA interface."""
+    identity = SCPIProperty("*IDN?")
+    complete = SCPIProperty("*OPC?")
+
     def __init__(
             self,
             resource_name: str,
@@ -186,9 +193,26 @@ class Instrument:
                 f"[{self.label}] Error closing resource manager: {e}"
             )
 
+    def setup(self, **kwargs) -> None:
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+            else:
+                raise AttributeError(f"{key} is not a valid attribute of "
+                                     f"{self.__class__.__name__}")
+
+    def reset(self):
+        self.write("*RST")
+
+    def clear(self):
+        self.write("*CLS")
+
+    def wait(self):
+        self.write("*WAI")
+
 
 class SubSystem:
-    """Represents a SCPI subsystem for an instrument.
+    """Represents an SCPI subsystem for an instrument.
 
     Attributes:
         instrument (Instrument): The instrument instance to which the
@@ -216,3 +240,6 @@ class SubSystem:
             Any: The attribute value from the instrument instance.
         """
         return getattr(self.instrument, name)
+
+    def setup(self, **kwargs) -> None:
+        [setattr(self, key, value) for key, value in kwargs.items()]
