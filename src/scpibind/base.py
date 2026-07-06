@@ -1,3 +1,4 @@
+import logging
 from pyvisa import ResourceManager, log_to_screen
 from typing import Any, Self, Protocol
 
@@ -46,15 +47,14 @@ class SCPIProperty:
 
 class ResourceBase:
     def __init__(self, resource_name: str, rm: ResourceManager | None = None,
-                 log_to_screen: bool = False, **kwargs) -> None:
+                 **resource_kwargs) -> None:
         self.resource_name = resource_name
-        self._rm = rm or ResourceManager()
+        self.rm = rm or ResourceManager()
+        self.resource_kwargs = resource_kwargs
         self._resource = None
-        self._log_to_screen = log_to_screen
-        self._kwargs = kwargs
 
     def __getattr__(self, name: str) -> Any:
-        getattr(self.resource, name)
+        return getattr(self._resource, name)
 
     def __enter__(self) -> Self:
         return self.open()
@@ -68,10 +68,8 @@ class ResourceBase:
         if self._resource is None:
             self._resource = self.rm.open_resource(
                 self.resource_name,
-                self._kwargs
+                **self.resource_kwargs
             )
-        if self._log_to_screen:
-            log_to_screen()
         return self
 
     def close(self):
