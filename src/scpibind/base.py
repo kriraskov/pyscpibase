@@ -1,48 +1,9 @@
-import logging
-from pyvisa import ResourceManager, log_to_screen
-from typing import Any, Self, Protocol
+from enum import Enum
+from pyvisa import ResourceManager
+from typing import Any, Self, TypeVar, Generic
 
 
-class VISAInterface(Protocol):
-    """Protocol for VISA interfaces."""
-    def write(self, message: str) -> None:
-        """Write a message to the resource.
-        
-        Args:
-            message (str): Message to write to the resource.
-        """
-        ...
-
-    def query(self, message: str) -> str:
-        """Write a message to the resource and query the response.
-        
-        Args:
-            message (str): Message to write to the resource.
-        
-        Returns:
-            str: Response from the resource.
-        """
-        ...
-
-
-class SCPIProperty:
-    def __init__(self, get_cmd: str, set_cmd: str | None = None,
-                 typecast: type = str):
-        self.get_cmd = get_cmd
-        self.set_cmd = set_cmd or get_cmd.replace("?", "")
-        self.typecast = typecast
-
-    def __get__(self, instance: VISAInterface, owner: type):
-        if instance is None:
-            return self
-
-        get_cmd = self.get_cmd.format(**vars(instance))
-
-        return self.typecast(instance.query(get_cmd))
-    
-    def __set__(self, instance: VISAInterface, value: Any) -> None:
-        set_cmd = self.set_cmd.format(**vars(instance))
-        instance.write(f"{set_cmd} {value}")
+T = TypeVar("T")
 
 
 class ResourceBase:
@@ -54,6 +15,8 @@ class ResourceBase:
         self._resource = None
 
     def __getattr__(self, name: str) -> Any:
+        if self._resource is None:
+            raise RuntimeError("Resource is not open.")
         return getattr(self._resource, name)
 
     def __enter__(self) -> Self:
@@ -85,9 +48,28 @@ class ResourceBase:
                 raise AttributeError(f"{key} is not a valid attribute.")
 
 
+class SCPIProperty(Generic[T]):
+    def __init__(self, get_cmd: str, set_cmd: str | None = None,
+                 type_: type[T] = str) -> None:
+        self.get_cmd = get_cmd
+        self.set_cmd = set_cmd or get_cmd.removesuffix("?")
+        self.type_ = type_  # str, float, int, Enum
+
+    def __get__(self, resource: ResourceBase | None, owner: type) -> T | Self:
+        if resource is None:
+            return self
+        message = resource.query(self.get_cmd).strip()
+        return self.type_(message)
+
+    def __set__(self, resource: ResourceBase, value: T) -> None:
+        if isinstance(value, Enum):
+            value = value.value
+        resource.write(f"{self.set_cmd} {value}")
+
+
 class Instrument(ResourceBase):
     identity = SCPIProperty("*IDN?")
-    complete = SCPIProperty("*OPC?")
+    complete = SCPIProperty("*OPC?", type_=int)
 
     def reset(self):
         self.write("*RST")
@@ -97,44 +79,3 @@ class Instrument(ResourceBase):
 
     def wait(self):
         self.write("*WAI")
-
-
-class SubSystem:
-    """Represents an SCPI subsystem for an instrument.
-
-    Attributes:
-        instrument (Instrument): The instrument instance to which the
-            subsystem belongs.
-        suffix (int): Subsystem suffix.
-    """
-    def __init__(self, instrument: Instrument, suffix: int) -> None:
-        """Initialize the channel.
-        
-        Args:
-            instrument (Instrument): The instrument instance to which
-                the subsystem belongs.
-            suffix (int): Subsystem suffix.
-        """
-        self.instrument = instrument
-        self.suffix = suffix
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the instrument instance.
-        
-        Args:
-            name (str): Name of the attribute to access.
-        
-        Returns:
-            Any: The attribute value from the instrument instance.
-        """
-        return getattr(self.instrument, name)
-
-    def setup(self, **kwargs) -> None:
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-            else:
-                raise AttributeError(
-                    f"{key} is not a valid attribute of "
-                    f"{self.__class__.__name__}"
-                )
