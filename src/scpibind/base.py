@@ -30,9 +30,12 @@ class Instrument(CommonBase):
         self.open()
         return self
 
-    def __exit__(self, exc_type: type[BaseException] | None,
-                 exc_value: BaseException | None,
-                 traceback: object | None) -> None:
+    def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: object | None
+    ) -> None:
         self.close()
 
     @classmethod
