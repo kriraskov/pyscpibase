@@ -1,5 +1,3 @@
-from descriptors import ReadWritefrom descriptors import ReadWrite
-
 # scpi-bind
 
 SCPI instrument abstraction with property binding built around PyVISA.
