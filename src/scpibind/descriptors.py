@@ -14,7 +14,7 @@ class ReadOnly(Generic[T]):
     def __get__(self, instance: CommonBase | None, owner: type) -> T | Self:
         if instance is None:
             return self
-        message = instance.query(self.get_cmd).strip()
+        message = instance.query(f"{instance.cmd_root}:{self.get_cmd}").strip()
         return self.type_(message)
 
 
@@ -31,7 +31,7 @@ class ReadWrite(ReadOnly[T]):
     def __set__(self, instance: CommonBase, value: T) -> None:
         if isinstance(value, Enum):
             value = value.value
-        instance.write(f"{self.set_cmd} {value}")
+        instance.write(f"{instance.cmd_root}:{self.set_cmd} {value}")
 
 
 class WriteOnly:
@@ -47,7 +47,8 @@ class WriteOnly:
             return self
         def bound(*args):
             if args:
-                instance.write(f"{self.set_cmd} {','.join(map(str, args))}")
+                payload = ','.join(map(str, args))
+                instance.write(f"{instance.cmd_root}:{self.set_cmd} {payload}")
             else:
-                instance.write(self.set_cmd)
+                instance.write(f"{instance.cmd_root}:{self.set_cmd}")
         return bound
