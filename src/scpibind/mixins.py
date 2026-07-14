@@ -1,4 +1,4 @@
-from src.scpibind.descriptors import ReadOnly, WriteOnly
+from descriptors import ReadOnly, WriteOnly
 
 
 class SCPIMixin:

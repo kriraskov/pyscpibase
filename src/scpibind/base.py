@@ -1,6 +1,5 @@
+from adapters.adapter import Adapter
 from adapters.visa_adapter import VISAAdapter
-from src.scpibind.adapters.adapter import Adapter
-from src.scpibind.descriptors import ReadWrite
 from typing import Any, Self
 
 
@@ -17,7 +16,7 @@ class CommonBase:
 
     def setup(self, **kwargs) -> None:
         for key, value in kwargs.items():
-            if key in vars(self):
+            if key in dir(self):
                 setattr(self, key, value)
             else:
                 raise AttributeError(

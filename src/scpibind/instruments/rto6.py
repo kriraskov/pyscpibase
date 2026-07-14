@@ -1,6 +1,8 @@
+from adapters.fake_adapter import FakeAdapter
 from base import Instrument, SubSystem
 from adapters.adapter import Adapter
-from descriptors import ReadWrite, WriteOnly, ReadOnly, ReadBinary
+from descriptors import *
+from mixins import SCPIMixin
 from enum import Enum
 import numpy as np
 
@@ -44,10 +46,10 @@ class FFTWindow(Enum):
     KAISER = "KAIS"
 
 
-class RTO6(Instrument):
-    format = ReadWrite("FORM?", type_=Format)
-    update_display = ReadWrite("SYST:DISP:UPD?", type_=State)
-    run_single = WriteOnly("RUNS")
+class RTO6(Instrument, SCPIMixin):
+    format = ReadWrite(":FORM?", type_=Format)
+    update_display = ReadWrite(":SYST:DISP:UPD?", type_=State)
+    run_single = WriteOnly(":RUNS")
 
     def __init__(self, adapter: Adapter):
         super().__init__(adapter)
@@ -59,20 +61,20 @@ class RTO6(Instrument):
 class Channel(SubSystem):
     cmd_root = "CHAN"
 
-    status = ReadWrite("STAT?", type_=State)
-    coupling = ReadWrite("COUP?", type_=Coupling)
+    status = ReadWrite(":STAT?", type_=State)
+    coupling = ReadWrite(":COUP?", type_=Coupling)
 
 
 class Math(SubSystem):
     cmd_root = "CALC:MATH"
 
-    status = ReadWrite("STAT?", type_=State)
-    expression = ReadWrite("EXPR?", type_=str)
-    range = ReadWrite("VERT:RANG?", type_=float)
-    header = ReadOnly("DATA:HEAD?", type_=str)
+    status = ReadWrite(":STAT?", type_=State)
+    expression = ReadWrite(":EXPR?", type_=str)
+    range = ReadWrite(":VERT:RANG?", type_=float)
+    header = ReadOnly(":DATA:HEAD?", type_=str)
 
     get_data = ReadBinary(
-        "DATA?",
+        ":DATA?",
         datatype="f",
         container=np.array
     )
@@ -81,12 +83,12 @@ class Math(SubSystem):
 class FFT(SubSystem):
     cmd_root = "CALC:MATH"
 
-    type = ReadWrite("FFT:TYPE?", type_=FFTType)
-    scale = ReadWrite("FFT:LOGS?", type_=FFTScale)
-    window = ReadWrite("FFT:WIND:TYPE?", type_=FFTWindow)
-    start = ReadWrite("FFT:START?", type_=float)
-    stop = ReadWrite("FFT:STOP?", type_=float)
-    bandwidth = ReadWrite("FFT:BAND?", type_=float)
-    level = ReadWrite("FFT:MAGN:LEV?", type_=float)
-    count = ReadWrite("FFT:FRAM:MAXC?", type_=int)
-    overlap = ReadWrite("FFT:FRAM:OFAC?", type_=float)
+    type = ReadWrite(":FFT:TYPE?", type_=FFTType)
+    scale = ReadWrite(":FFT:LOGS?", type_=FFTScale)
+    window = ReadWrite(":FFT:WIND:TYPE?", type_=FFTWindow)
+    start = ReadWrite(":FFT:START?", type_=float)
+    stop = ReadWrite(":FFT:STOP?", type_=float)
+    bandwidth = ReadWrite(":FFT:BAND?", type_=float)
+    level = ReadWrite(":FFT:MAGN:LEV?", type_=float)
+    count = ReadWrite(":FFT:FRAM:MAXC?", type_=int)
+    overlap = ReadWrite(":FFT:FRAM:OFAC?", type_=float)

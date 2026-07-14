@@ -16,8 +16,9 @@ pip install scpi-bind
 ## Example
 
 ```python
-from src.scpibind.base import Instrument, SubSystem
-from src.scpibind.descriptors import ReadWrite
+from scpibind.base import Instrument, SubSystem
+from scpibind.descriptors import ReadWrite
+from scpibind.mixins import SCPIMixin
 from enum import Enum
 
 
@@ -36,7 +37,7 @@ class Channel(SubSystem):
     current = ReadWrite("CURR?", type_=float)
 
 
-class PowerSupply(Instrument):
+class PowerSupply(Instrument, SCPIMixin):
     beep = ReadWrite("SYST:BEEP", type_=State)
     
     def __init__(self, adapter):
