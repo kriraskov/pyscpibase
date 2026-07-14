@@ -5,17 +5,17 @@ from typing import Self, Sequence, Any
 
 class VISAAdapter(Adapter):
     def __init__(self, resource_name: str, rm: ResourceManager | None = None,
-                 **resource_kwargs) -> None:
+                 **kwargs) -> None:
         self.resource_name = resource_name
         self.rm = rm or ResourceManager()
-        self.resource_kwargs = resource_kwargs
+        self.kwargs = kwargs
         self._resource = None
 
     def open(self) -> Self:
         if self._resource is None:
             self._resource = self.rm.open_resource(
                 self.resource_name,
-                **self.resource_kwargs
+                **self.kwargs
             )
         return self
 
